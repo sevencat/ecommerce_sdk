@@ -1,10 +1,7 @@
 ﻿namespace douyinsdkgen;
 
-public class DouyinSdkIdxRsp : IDouyinReq
+public class DouyinSdkIdxRsp 
 {
-	public string GetMethod() { return "hello;"; }
-
-	public string GetUrl() { return "hello;"; }
 
 	public int code { get; set; }
 	public string message { get; set; }

@@ -1,0 +1,14 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+    <PropertyGroup>
+        <TargetFramework>net7.0</TargetFramework>
+        <ImplicitUsings>enable</ImplicitUsings>
+        <Nullable>disable</Nullable>
+        <AssemblyName>ecommerce.sdk.douyin</AssemblyName>
+        <RootNamespace>ecommerce.sdk.douyin</RootNamespace>
+        <PackageId>ecommerce.sdk.douyin</PackageId>
+        <Authors>sevencat</Authors>
+    </PropertyGroup>
+
+
+</Project>

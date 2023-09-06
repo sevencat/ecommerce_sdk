@@ -26,11 +26,11 @@ public class DouyinGenApi
 				//[DouyinRetCode(200,"","","","")]
 				sb.AddChar(tabnum, '\t')
 					.Append(
-						$"[DouyinRetCode({e.code},\"{e.msg}\",\"{e.subMsg}\",\"{e.subCode}\",\"{e.solution}\")]\r\n");
+						$"[DouyinRetCode({e.code},\"{TrimDesc(e.msg)}\",\"{TrimDesc(e.subMsg)}\",\"{TrimDesc(e.subCode)}\",\"{TrimDesc(e.solution)}\")]\r\n");
 			}
 		}
 
-		sb.AddChar(tabnum, '\t').Append($"public class {baseclsName}Req : IDouyinReturn<{baseclsName}Rsp>")
+		sb.AddChar(tabnum, '\t').Append($"public class {baseclsName}Req : IDouyinReq<{baseclsName}Rsp>")
 			.AppendLine();
 		sb.AddChar(tabnum, '\t').AppendLine("{");
 
@@ -45,7 +45,7 @@ public class DouyinGenApi
 			for (var i = 0; i < api.request.requestParam.Count; i++)
 			{
 				var rpi = api.request.requestParam[i];
-				Gen(rpi, sb, tabnum + 1);
+				Gen(rpi, sb, tabnum + 1,baseclsName);
 				if (i != api.request.requestParam.Count - 1)
 					sb.AppendLine();
 			}
@@ -65,7 +65,7 @@ public class DouyinGenApi
 			for (var i = 0; i < api.response.responseData.Count; i++)
 			{
 				var rpi = api.response.responseData[i];
-				Gen(rpi, sb, tabnum + 1);
+				Gen(rpi, sb, tabnum + 1,baseclsName);
 				if (i != api.response.responseData.Count - 1)
 					sb.AppendLine();
 			}
@@ -136,7 +136,7 @@ public class DouyinGenApi
 		for (var i = 0; i < prpi.children.Count; i++)
 		{
 			var rpi = prpi.children[i];
-			Gen(rpi, sb, tabnum + 1);
+			Gen(rpi, sb, tabnum + 1,ppname);
 			if (i != prpi.children.Count - 1)
 				sb.AppendLine();
 		}
@@ -144,9 +144,11 @@ public class DouyinGenApi
 		sb.AddChar(tabnum, '\t').AppendLine("}");
 	}
 
-	public void Gen(DouyinApiDef.RequestParamItem rpi, StringBuilder sb, int tabnum)
+	public void Gen(DouyinApiDef.RequestParamItem rpi, StringBuilder sb, int tabnum,string parppname)
 	{
 		var ppname = ToCamelCase(rpi.requestName);
+		if (ppname == parppname)
+			ppname = ppname + "I";
 		if (ppname != rpi.requestName)
 			sb.AddChar(tabnum, '\t').Append($"[JsonPropertyName(\"{rpi.requestName}\")]\r\n");
 		if (!String.IsNullOrWhiteSpace(rpi.description))
@@ -155,6 +157,9 @@ public class DouyinGenApi
 			sb.AddChar(tabnum, '\t').Append($"[NotNull]\r\n");
 		switch (rpi.type)
 		{
+			case 0:
+				sb.AddChar(tabnum, '\t').Append($"public object {ppname} {{ get; set; }}\r\n");
+				break;
 			case 1:
 				sb.AddChar(tabnum, '\t').Append($"public long? {ppname} {{ get; set; }}\r\n");
 				break;
@@ -203,6 +208,7 @@ public class DouyinGenApi
 		}
 	}
 
+	// ppname 当前字段的class名称，prappname 父类的名称
 	public void GenClass(DouyinApiDef.ResponseDataItem prpi, string ppname, StringBuilder sb, int tabnum)
 	{
 		sb.AddChar(tabnum, '\t').AppendFormat($"public class {ppname}Item").AppendLine();
@@ -212,7 +218,7 @@ public class DouyinGenApi
 			for (var i = 0; i < prpi.children.Count; i++)
 			{
 				var rpi = prpi.children[i];
-				Gen(rpi, sb, tabnum + 1);
+				Gen(rpi, sb, tabnum + 1,ppname);
 				if (i != prpi.children.Count - 1)
 					sb.AppendLine();
 			}
@@ -221,9 +227,11 @@ public class DouyinGenApi
 		sb.AddChar(tabnum, '\t').AppendLine("}");
 	}
 
-	public void Gen(DouyinApiDef.ResponseDataItem rpi, StringBuilder sb, int tabnum)
+	public void Gen(DouyinApiDef.ResponseDataItem rpi, StringBuilder sb, int tabnum,string parppname)
 	{
 		var ppname = ToCamelCase(rpi.responseName);
+		if (ppname == parppname)
+			ppname = ppname + "I";
 		if (ppname != rpi.responseName)
 			sb.AddChar(tabnum, '\t').Append($"[JsonPropertyName(\"{rpi.responseName}\")]\r\n");
 		if (!String.IsNullOrWhiteSpace(rpi.description))
@@ -281,7 +289,9 @@ public class DouyinGenApi
 
 	public static string TrimDesc(string desc)
 	{
-		return desc.Replace("\r\n", ",").Replace('\n', ',').Replace("\"", "");
+		if (desc == null)
+			return "";
+		return desc.Replace("\r\n", ",").Replace('\n', ',').Replace("\"", "").Replace('\\', ',');
 	}
 
 	public static string ToCamelCase(string the_string)

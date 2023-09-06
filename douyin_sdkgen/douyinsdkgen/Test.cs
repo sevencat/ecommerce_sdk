@@ -1,10 +1,7 @@
 ﻿namespace douyinsdkgen;
 
-public interface IDouyinReturn<T>
-{
-}
 
-public interface IDouyinReq
+public interface IDouyinReq<T>
 {
 	string GetMethod();
 	string GetUrl();
