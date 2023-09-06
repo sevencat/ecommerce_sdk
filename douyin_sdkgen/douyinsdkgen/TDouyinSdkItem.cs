@@ -1,15 +1,12 @@
-﻿using System.ComponentModel.DataAnnotations;
-using System.ComponentModel.DataAnnotations.Schema;
-using Microsoft.EntityFrameworkCore;
+﻿using FreeSql.DataAnnotations;
 
 namespace douyinsdkgen;
 
-[Table("sdk_douyinitem")]
-[Index("snap")]
-public class DouyinSdkItem
+[Table(Name = "sdk_douyinitem")]
+[Index("idx_snap", "snap", false)]
+public class TDouyinSdkItem
 {
-	[Key]
-	[DatabaseGenerated(DatabaseGeneratedOption.Identity)]
+	[Column(IsIdentity = false, IsPrimary = true)]
 	public int id { get; set; }
 
 	public string title { get; set; }
@@ -17,6 +14,7 @@ public class DouyinSdkItem
 	public string subtitle { get; set; }
 
 	public int dirId { get; set; }
+	public string dirName { get; set; }
 
 	public int status { get; set; }
 
@@ -28,6 +26,8 @@ public class DouyinSdkItem
 	public string url { get; set; }
 	public int apiChargeType { get; set; }
 
+
 	public int snap { get; set; }
+
 	public string ctx { get; set; }
 }

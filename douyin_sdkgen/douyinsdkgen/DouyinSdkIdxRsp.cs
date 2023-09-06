@@ -1,7 +1,11 @@
 ﻿namespace douyinsdkgen;
 
-public class DouyinSdkIdxRsp
+public class DouyinSdkIdxRsp : IDouyinReq
 {
+	public string GetMethod() { return "hello;"; }
+
+	public string GetUrl() { return "hello;"; }
+
 	public int code { get; set; }
 	public string message { get; set; }
 
@@ -28,6 +32,7 @@ public class DouyinSdkIdxRsp
 		public string subtitle { get; set; }
 
 		public int dirId { get; set; }
+		public string dirName { get; set; }
 
 		public int status { get; set; }
 

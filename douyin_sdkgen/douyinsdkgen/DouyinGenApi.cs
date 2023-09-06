@@ -5,42 +5,52 @@ namespace douyinsdkgen;
 
 public class DouyinGenApi
 {
-	public void Gen(DouyinSdkItem item, StringBuilder sb, int tabnum)
+	public void Gen(TDouyinSdkItem item, string ns, StringBuilder sb)
 	{
 		var api = JsonSerializer.Deserialize<DouyinApiDef>(item.ctx);
-		Gen(item, api, sb, tabnum);
+		//namespace douyinsdkgen;
+		sb.AppendFormat($"namespace {ns};\r\n\r\n");
+		Gen(item, api, sb, 0);
 	}
 
 	//1-long 2-string  ,3 list 4-bool 5-struct 8-map 
-	public void Gen(DouyinSdkItem item, DouyinApiDef api, StringBuilder sb, int tabnum)
+	public void Gen(TDouyinSdkItem item, DouyinApiDef api, StringBuilder sb, int tabnum)
 	{
 		var baseclsName = ToCamelCase(item.title);
 		if (!String.IsNullOrWhiteSpace(item.description))
 			sb.AddChar(tabnum, '\t').Append($"[Description(\"{TrimDesc(item.description)}\")]\r\n");
-		if (api.error != null)
+		if (api.error is { errCodeList: not null })
 		{
-			if (api.error.errCodeList != null)
+			foreach (var e in api.error.errCodeList)
 			{
-				foreach (var e in api.error.errCodeList)
-				{
-					//[DouyinRetCode(200,"","","","")]
-					sb.AddChar(tabnum, '\t')
-						.Append(
-							$"[DouyinRetCode({e.code},\"{e.msg}\",\"{e.subMsg}\",\"{e.subCode}\",\"{e.solution}\")]\r\n");
-				}
+				//[DouyinRetCode(200,"","","","")]
+				sb.AddChar(tabnum, '\t')
+					.Append(
+						$"[DouyinRetCode({e.code},\"{e.msg}\",\"{e.subMsg}\",\"{e.subCode}\",\"{e.solution}\")]\r\n");
 			}
 		}
 
-		sb.AddChar(tabnum, '\t').AppendFormat($"public class {baseclsName}Req : IDouyinReturn<{baseclsName}Rsp>")
+		sb.AddChar(tabnum, '\t').Append($"public class {baseclsName}Req : IDouyinReturn<{baseclsName}Rsp>")
 			.AppendLine();
 		sb.AddChar(tabnum, '\t').AppendLine("{");
-		for (var i = 0; i < api.request.requestParam.Count; i++)
+
+		var m = item.title.Replace('/', '.').TrimStart('.');
+		sb.AppendLine();
+		sb.AddChar(tabnum + 1, '\t').Append($"public string GetMethod() {{ return \"{m}\"; }}\r\n");
+		sb.AppendLine();
+		sb.AddChar(tabnum + 1, '\t').Append($"public string GetUrl() {{ return \"{item.title}\"; }}\r\n");
+		sb.AppendLine();
+		if (api.request is { requestParam: not null })
 		{
-			var rpi = api.request.requestParam[i];
-			Gen(rpi, sb, tabnum + 1);
-			if (i != api.request.requestParam.Count - 1)
-				sb.AppendLine();
+			for (var i = 0; i < api.request.requestParam.Count; i++)
+			{
+				var rpi = api.request.requestParam[i];
+				Gen(rpi, sb, tabnum + 1);
+				if (i != api.request.requestParam.Count - 1)
+					sb.AppendLine();
+			}
 		}
+
 
 		sb.AddChar(tabnum, '\t').AppendLine("}");
 
@@ -48,14 +58,17 @@ public class DouyinGenApi
 
 		if (!String.IsNullOrWhiteSpace(item.description))
 			sb.AddChar(tabnum, '\t').Append($"[Description(\"{TrimDesc(item.description)}\")]\r\n");
-		sb.AddChar(tabnum, '\t').AppendFormat($"public class {baseclsName}Rsp").AppendLine();
+		sb.AddChar(tabnum, '\t').Append($"public class {baseclsName}Rsp").AppendLine();
 		sb.AddChar(tabnum, '\t').AppendLine("{");
-		for (var i = 0; i < api.response.responseData.Count; i++)
+		if (api.response is { responseData: not null })
 		{
-			var rpi = api.response.responseData[i];
-			Gen(rpi, sb, tabnum + 1);
-			if (i != api.response.responseData.Count - 1)
-				sb.AppendLine();
+			for (var i = 0; i < api.response.responseData.Count; i++)
+			{
+				var rpi = api.response.responseData[i];
+				Gen(rpi, sb, tabnum + 1);
+				if (i != api.response.responseData.Count - 1)
+					sb.AppendLine();
+			}
 		}
 
 		sb.AddChar(tabnum, '\t').AppendLine("}");
@@ -66,6 +79,10 @@ public class DouyinGenApi
 		string postfix = nullable ? "?" : "";
 		switch (t)
 		{
+			case 0:
+				return "object";
+			case 3:
+				return "object";
 			case 1:
 				return "long" + postfix;
 			case 2:
@@ -79,18 +96,26 @@ public class DouyinGenApi
 			case 9:
 				return "decimal" + postfix;
 			default:
-				Console.WriteLine("unknown:" + t);
+				Console.WriteLine("unknown GetTypeStr:" + t);
 				break;
 		}
 
 		return "unknown " + t;
 	}
 
-	public string GetMapTypeStr(DouyinApiDef.BaseParamItem rpi)
+	public string GetMapTypeStr(DouyinApiDef.BaseParamItem rpi, string ppname)
 	{
-		var ks = GetTypeStr(rpi.mapKeyType, false);
-		var vs = GetTypeStr(rpi.mapValueType, false);
-		return $"Dictionary<{ks},{vs}>";
+		if (rpi.mapValueType != 5)
+		{
+			var ks = GetTypeStr(rpi.mapKeyType, false);
+			var vs = GetTypeStr(rpi.mapValueType, false);
+			return $"Dictionary<{ks},{vs}>";
+		}
+		else
+		{
+			var ks = GetTypeStr(rpi.mapKeyType, false);
+			return $"Dictionary<{ks},{ppname}Item>";
+		}
 	}
 
 	public string GetListTypeStr(DouyinApiDef.BaseParamItem rpi, string ppname)
@@ -161,8 +186,14 @@ public class DouyinGenApi
 				sb.AddChar(tabnum, '\t').Append($"public int? {ppname} {{ get; set; }}\r\n");
 				break;
 			case 8:
-				var d = GetMapTypeStr(rpi);
+				var d = GetMapTypeStr(rpi, ppname);
 				sb.AddChar(tabnum, '\t').Append($"public {d} {ppname} {{ get; set; }}\r\n");
+				if (rpi.mapValueType == 5)
+				{
+					sb.AppendLine();
+					GenClass(rpi, ppname, sb, tabnum);
+				}
+
 				break;
 			case 9:
 				sb.AddChar(tabnum, '\t').Append($"public decimal? {ppname} {{ get; set; }}\r\n");
@@ -176,12 +207,15 @@ public class DouyinGenApi
 	{
 		sb.AddChar(tabnum, '\t').AppendFormat($"public class {ppname}Item").AppendLine();
 		sb.AddChar(tabnum, '\t').AppendLine("{");
-		for (var i = 0; i < prpi.children.Count; i++)
+		if (prpi.children != null)
 		{
-			var rpi = prpi.children[i];
-			Gen(rpi, sb, tabnum + 1);
-			if (i != prpi.children.Count - 1)
-				sb.AppendLine();
+			for (var i = 0; i < prpi.children.Count; i++)
+			{
+				var rpi = prpi.children[i];
+				Gen(rpi, sb, tabnum + 1);
+				if (i != prpi.children.Count - 1)
+					sb.AppendLine();
+			}
 		}
 
 		sb.AddChar(tabnum, '\t').AppendLine("}");
@@ -227,8 +261,14 @@ public class DouyinGenApi
 				sb.AddChar(tabnum, '\t').Append($"public int {ppname} {{ get; set; }}\r\n");
 				break;
 			case 8:
-				var d = GetMapTypeStr(rpi);
+				var d = GetMapTypeStr(rpi, ppname);
 				sb.AddChar(tabnum, '\t').Append($"public {d} {ppname} {{ get; set; }}\r\n");
+				if (rpi.mapValueType == 5)
+				{
+					sb.AppendLine();
+					GenClass(rpi, ppname, sb, tabnum);
+				}
+
 				break;
 			case 9:
 				sb.AddChar(tabnum, '\t').Append($"public decimal {ppname} {{ get; set; }}\r\n");
